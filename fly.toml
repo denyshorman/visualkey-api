@@ -1,0 +1,28 @@
+app = "visual-key-api"
+primary_region = "cdg"
+
+kill_signal = "SIGTERM"
+kill_timeout = 120
+
+[build]
+  image = "ghcr.io/denyshorman/visualkey-api:latest"
+
+[deploy]
+  strategy = "canary"
+
+[env]
+  HTTP_PORT = "80"
+  ENVIRONMENT = "prod"
+  BEHIND_PROXY = "true"
+  SECRETS_FILE_PATH = "/app/secrets.conf"
+
+[http_service]
+  internal_port = 80
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 1
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 2048
+    hard_limit = 4096

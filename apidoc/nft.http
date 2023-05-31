@@ -1,0 +1,60 @@
+### GET Token Metadata
+< {%
+    request.variables.set("token", "1")
+%}
+GET {{host}}/v1/nft/tokens/{{token}}
+
+
+### GET Token Image
+< {%
+    request.variables.set("token", "1")
+    request.variables.set("size", "352")
+%}
+GET {{host}}/v1/nft/images/{{token}}?size={{size}}
+
+
+### GET Token Price
+< {%
+    request.variables.set("token", "1")
+    request.variables.set("chainId", "80001")
+    request.variables.set("receiver", "0x1b0Cc34F5858bdF476ef826E40Ba5e239ff54dF1")
+    request.variables.set("checkDiscount", "false")
+%}
+GET {{host}}/v1/nft/tokens/{{token}}/price?chainId={{chainId}}&receiver={{receiver}}&checkDiscount={{checkDiscount}}
+
+
+### GET Token Minting Authorization
+< {%
+    request.variables.set("token", "1")
+    request.variables.set("chainId", "80001")
+    request.variables.set("contract", "0xd7fF4267c231D9cc9D620B8E37277211Bec87A58")
+    request.variables.set("receiver", "0x1b0Cc34F5858bdF476ef826E40Ba5e239ff54dF1")
+    request.variables.set("checkDiscount", "false")
+%}
+GET {{host}}/v1/nft/tokens/{{token}}/minting/authorization?
+    chainId={{chainId}}&
+    contract={{contract}}&
+    receiver={{receiver}}&
+    checkDiscount={{checkDiscount}}
+
+
+### GET Token Minting Authorization With Price
+< {%
+    request.variables.set("token", "1")
+    request.variables.set("chainId", "80001")
+    request.variables.set("contract", "0xd7fF4267c231D9cc9D620B8E37277211Bec87A58")
+    request.variables.set("receiver", "0x1b0Cc34F5858bdF476ef826E40Ba5e239ff54dF1")
+    request.variables.set("checkDiscount", "false")
+    request.variables.set("price", "1078750000000000")
+    request.variables.set("priceExpirationTime", "1685351434")
+    request.variables.set("priceSignature", "0x357f7e27dea06f8619eedf88a7118876dcdfeb43e0b6e50a86f75a2e60a1e7906f57f437b0d70f2a76611facc655195cfeb1b37ddf9765e689551ca6b66e37821b")
+%}
+GET {{host}}/v1/nft/tokens/{{token}}/minting/authorization?
+    chainId={{chainId}}&
+    contract={{contract}}&
+    receiver={{receiver}}&
+    checkDiscount={{checkDiscount}}&
+    price={{price}}&
+    priceExpirationTime={{priceExpirationTime}}&
+    priceSignature={{priceSignature}}
+
