@@ -1,24 +1,22 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
-val kotlinVersion = "1.8.21"
-val ktorVersion = "2.3.0"
-val koinVersion = "3.4.0"
-val kotestVersion = "5.6.1"
-val logbackVersion = "1.4.7"
-
 group = "visualkey"
 version = "0.0.0"
-java.sourceCompatibility = JavaVersion.VERSION_19
 
 plugins {
-    application
-    kotlin("jvm") version "1.8.21"
-    kotlin("plugin.serialization") version "1.8.21"
-    id("io.ktor.plugin") version "2.3.0"
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.ktor)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.graalvm.native)
 }
 
 application {
     mainClass.set("visualkey.MainKt")
+}
+
+kotlin {
+    jvmToolchain {
+        languageVersion = JavaLanguageVersion.of(23)
+        vendor = JvmVendorSpec.ADOPTIUM
+    }
 }
 
 ktor {
@@ -32,38 +30,31 @@ repositories {
 }
 
 dependencies {
-    implementation("io.ktor:ktor-server-core-jvm:$ktorVersion")
-    implementation("io.ktor:ktor-server-cio-jvm:$ktorVersion")
-    implementation("io.ktor:ktor-server-cors:$ktorVersion")
-    implementation("io.ktor:ktor-server-content-negotiation:$ktorVersion")
-    implementation("io.ktor:ktor-server-forwarded-header:$ktorVersion")
-    implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
-    implementation("io.ktor:ktor-server-rate-limit:$ktorVersion")
-    implementation("io.ktor:ktor-client-core:$ktorVersion")
-    implementation("io.ktor:ktor-client-cio:$ktorVersion")
-    implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
-    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.0")
-    implementation("ch.qos.logback:logback-classic:$logbackVersion")
-    implementation("io.insert-koin:koin-ktor:$koinVersion")
-    implementation("io.insert-koin:koin-logger-slf4j:$koinVersion")
-    implementation("org.web3j:core:4.9.8")
-    testImplementation(kotlin("test"))
-    testImplementation("io.ktor:ktor-server-tests-jvm:$ktorVersion")
-    testImplementation("io.kotest:kotest-runner-junit5:$kotestVersion")
-    testImplementation("io.kotest:kotest-assertions-core:$kotestVersion")
+    implementation(libs.ktor.server.core)
+    implementation(libs.ktor.server.cio)
+    implementation(libs.ktor.server.cors)
+    implementation(libs.ktor.server.content.negotiation)
+    implementation(libs.ktor.server.forwarded.header)
+    implementation(libs.ktor.server.status.pages)
+    implementation(libs.ktor.server.rate.limit)
+    implementation(libs.ktor.server.swagger)
+    implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(libs.logback.classic)
+    implementation(libs.koin.ktor)
+    implementation(libs.koin.logger.slf4j)
+    implementation(libs.batik.transcoder)
+    implementation(libs.batik.codec)
+    implementation(libs.web3j.core)
 }
 
-tasks.withType<KotlinCompile> {
-    kotlinOptions {
-        jvmTarget = "19"
+graalvmNative {
+    binaries {
+        named("main") {
+            verbose.set(true)
+            imageName.set("api")
 
-        freeCompilerArgs = freeCompilerArgs + listOf(
-            "-opt-in=kotlinx.serialization.ExperimentalSerializationApi",
-        )
+            buildArgs.add("--install-exit-handlers")
+            buildArgs.add("--exact-reachability-metadata")
+        }
     }
-}
-
-tasks.test {
-    useJUnitPlatform()
 }

@@ -1,14 +1,9 @@
 package visualkey
 
-import visualkey.api.common.apiExceptionHandler
-import visualkey.api.common.generalRateLimits
-import visualkey.api.common.generalRoutes
-import visualkey.api.nft.nftRateLimits
-import visualkey.api.nft.nftRoutes
-import visualkey.config.loadDependencies
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.cio.*
+import io.ktor.server.engine.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.forwardedheaders.*
@@ -18,66 +13,59 @@ import io.ktor.server.routing.*
 import kotlinx.serialization.json.Json
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
-import java.io.File
-import java.util.*
+import visualkey.api.common.apiExceptionHandler
+import visualkey.api.common.generalRateLimits
+import visualkey.api.common.generalRoutes
+import visualkey.api.nft.nftRoutes
+import visualkey.config.loadDependencies
 
-fun main(args: Array<String>) {
-    EngineMain.main(augment(args))
-}
-
-@Suppress("unused")
-fun Application.main() {
-    install(ContentNegotiation) {
-        json(Json {
-            explicitNulls = false
+fun main() {
+    embeddedServer(CIO, configure = {
+        connectors.add(EngineConnectorBuilder().apply {
+            host = System.getenv("HTTP_HOST") ?: "0.0.0.0"
+            port = System.getenv("HTTP_PORT")?.toIntOrNull() ?: 8080
         })
-    }
 
-    install(CORS) {
-        anyHost()
-    }
-
-    install(Koin) {
-        slf4jLogger()
-        loadDependencies(environment)
-    }
-
-    install(StatusPages) {
-        apiExceptionHandler(this@main.environment)
-    }
-
-    install(RateLimit) {
-        generalRateLimits()
-        nftRateLimits()
-    }
-
-    run {
-        val behindProxy = environment.config.property("app.behindProxy").getString().toBoolean()
-
-        if (behindProxy) {
-            install(XForwardedHeaders)
+        shutdownGracePeriod = 2000
+        shutdownTimeout = 60000
+    }) {
+        install(ContentNegotiation) {
+            json(Json {
+                explicitNulls = false
+            })
         }
-    }
 
-    routing {
-        generalRoutes()
-        nftRoutes()
-    }
-}
+        install(CORS) {
+            anyHost()
+            anyMethod()
+            allowHeaders { true }
+            allowNonSimpleContentTypes = true
+        }
 
-fun augment(args: Array<String>): Array<String> {
-    val secretsFilePath = System.getenv("SECRETS_FILE_PATH") ?: return args
+        install(Koin) {
+            slf4jLogger()
+            loadDependencies()
+        }
 
-    val secretsFile = File(secretsFilePath)
+        install(StatusPages) {
+            apiExceptionHandler()
+        }
 
-    if (!secretsFile.exists()) {
-        val secretsFileDataEncoded = System.getenv("SECRETS_FILE_DATA")
-            ?: throw Exception("SECRETS_FILE_DATA environment variable is not set")
+        install(RateLimit) {
+            generalRateLimits()
+        }
 
-        val secretsFileData = Base64.getDecoder().decode(secretsFileDataEncoded)
+        run {
+            val behindProxy = System.getenv("BEHIND_PROXY")?.toBoolean() ?: false
 
-        secretsFile.writeBytes(secretsFileData)
-    }
+            if (behindProxy) {
+                install(XForwardedHeaders)
+            }
+        }
 
-    return args + arrayOf("-config=$secretsFilePath")
+        routing {
+            generalRoutes()
+            nftRoutes()
+        }
+    }.start(true)
 }

@@ -1,108 +1,16 @@
 package visualkey.api.common
 
-import visualkey.model.Environment
-import visualkey.model.toEnvironment
-import visualkey.service.nft.*
 import io.ktor.http.*
-import io.ktor.server.application.*
 import io.ktor.server.plugins.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import visualkey.model.Environment
+import visualkey.model.toEnvironment
 
-fun StatusPagesConfig.apiExceptionHandler(environment: ApplicationEnvironment) {
-    val deployEnv = environment.config.property("app.environment").getString().toEnvironment()
-
-    exception<InvalidSignatureException> { call, cause ->
-        val error = ErrorResponse(
-            code = "INVALID_SIGNATURE",
-            message = cause.message ?: "Invalid signature",
-            params = buildJsonObject {
-                put("actual", cause.actual)
-                put("expected", cause.expected)
-            },
-        )
-        call.respond(HttpStatusCode.BadRequest, error)
-    }
-
-    exception<PriceExpiredException> { call, cause ->
-        val error = ErrorResponse(
-            code = "PRICE_EXPIRED",
-            message = cause.message ?: "Invalid signature",
-            params = buildJsonObject {
-                put("expirationTime", cause.expirationTime.toLong())
-                put("serverTime", cause.serverTime.toLong())
-            },
-        )
-        call.respond(HttpStatusCode.UnprocessableEntity, error)
-    }
-
-    exception<SignerNotFoundException> { call, cause ->
-        val error = ErrorResponse(
-            code = "SIGNER_NOT_FOUND",
-            message = cause.message ?: "Signer not found",
-            params = buildJsonObject {
-                put("chainId", cause.chainId.toLong())
-                put("contractAddress", cause.contractAddress)
-            },
-        )
-        call.respond(HttpStatusCode.UnprocessableEntity, error)
-    }
-
-    exception<ChainNotSupportedException> { call, cause ->
-        val error = ErrorResponse(
-            code = "CHAIN_NOT_SUPPORTED",
-            message = cause.message ?: "Chain not supported",
-            params = buildJsonObject {
-                put("chainId", cause.chainId.toLong())
-            },
-        )
-        call.respond(HttpStatusCode.UnprocessableEntity, error)
-    }
-
-    exception<TokenAlreadyMintedException> { call, cause ->
-        val error = ErrorResponse(
-            code = "TOKEN_ALREADY_MINTED",
-            message = cause.message ?: "Token already minted",
-            params = buildJsonObject {
-                put("region", cause.region.name.lowercase())
-                put("owner", cause.owner)
-                put("token", cause.token.toString())
-            },
-        )
-        call.respond(HttpStatusCode.UnprocessableEntity, error)
-    }
-
-    exception<PendingMintingException> { call, cause ->
-        val error = ErrorResponse(
-            code = "PENDING_MINTING",
-            message = cause.message ?: "Pending minting",
-            params = buildJsonObject {
-                put("chainId", cause.chainId.toLong())
-                put("contract", cause.contract)
-                put("receiver", cause.receiver)
-                put("token", cause.token.toString())
-                put("mintDeadline", cause.mintDeadline.toLong())
-            },
-        )
-        call.respond(HttpStatusCode.UnprocessableEntity, error)
-    }
-
-    exception<TokenLockedException> { call, cause ->
-        val error = ErrorResponse(
-            code = "TOKEN_LOCKED",
-            message = cause.message ?: "Token is locked",
-            params = buildJsonObject {
-                put("region", cause.region.name.lowercase())
-                put("chainId", cause.chainId.toLong())
-                put("token", cause.token.toString())
-                put("lockedBy", cause.lockedBy)
-                put("lockedWhen", cause.lockedWhen.toLong())
-            },
-        )
-        call.respond(HttpStatusCode.UnprocessableEntity, error)
-    }
+fun StatusPagesConfig.apiExceptionHandler() {
+    val deployEnv = System.getenv("ENVIRONMENT")?.toEnvironment() ?: Environment.Local
 
     exception<MissingRequestParameterException> { call, cause ->
         val error = ErrorResponse(

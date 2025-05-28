@@ -1,0 +1,208 @@
+openapi: 3.1.1
+info:
+  title: VisualKey NFT API
+  version: "1.0.0"
+  description: |
+    API for VisualKey NFT collection and token metadata, as well as on-the-fly image generation.
+paths:
+  /v1/nft:
+    get:
+      summary: Get NFT Collection Metadata
+      operationId: getCollectionMetadata
+      tags: [NFT]
+      responses:
+        '200':
+          description: Collection metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionMetadata'
+  /v1/nft/tokens/{id}:
+    get:
+      summary: Get NFT Token Metadata
+      operationId: getTokenMetadata
+      tags: [NFT]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Token ID (Ethereum address, hex string)
+        - name: level
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 160
+          description: Level (0-160)
+        - name: power
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-Fx]+$'
+          description: Power (uint256, decimal or hex string)
+        - name: createdAt
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: Creation date (Unix epoch seconds)
+      responses:
+        '200':
+          description: Token metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenMetadata'
+        '400':
+          description: Invalid parameters
+  /v1/nft/images/{id}:
+    get:
+      summary: Get NFT Token Image (PNG)
+      operationId: getTokenImagePng
+      tags: [NFT]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Token ID (Ethereum address, hex string)
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+          description: Bit size (default 29)
+      responses:
+        '200':
+          description: PNG image
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+  /v1/nft/images/{id}.png:
+    get:
+      summary: Get NFT Token Image (PNG)
+      operationId: getTokenImagePngExt
+      tags: [NFT]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Token ID (Ethereum address, hex string)
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+          description: Bit size (default 29)
+      responses:
+        '200':
+          description: PNG image
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+  /v1/nft/images/{id}.svg:
+    get:
+      summary: Get NFT Token Image (SVG)
+      operationId: getTokenImageSvg
+      tags: [NFT]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Token ID (Ethereum address, hex string)
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+          description: Bit size (default 29)
+      responses:
+        '200':
+          description: SVG image
+          content:
+            image/svg+xml:
+              schema:
+                type: string
+                format: binary
+components:
+  schemas:
+    CollectionMetadata:
+      type: object
+      properties:
+        name:
+          type: string
+        symbol:
+          type: string
+        description:
+          type: string
+        image:
+          type: string
+          format: uri
+        banner_image:
+          type: string
+          format: uri
+        featured_image:
+          type: string
+          format: uri
+        external_link:
+          type: string
+          format: uri
+        collaborators:
+          type: array
+          items:
+            type: string
+    TokenMetadata:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        image:
+          type: string
+          format: uri
+        external_url:
+          type: string
+          format: uri
+        background_color:
+          type: string
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/TokenAttribute'
+    TokenAttribute:
+      type: object
+      properties:
+        trait_type:
+          type: string
+        value:
+          oneOf:
+            - type: string
+            - type: integer
+            - type: number
+        display_type:
+          type: string
+          nullable: true
+      required:
+        - trait_type
+        - value

@@ -1,83 +1,66 @@
 package visualkey.api.nft
 
 import io.ktor.http.*
-import io.ktor.server.application.*
 import io.ktor.server.plugins.*
-import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.util.*
 import org.koin.ktor.ext.inject
-import visualkey.service.nft.MintAuthorization
 import visualkey.service.nft.NftService
 import visualkey.util.serverUrl
 
 fun Route.nftRoutes() {
     val nftService by inject<NftService>()
 
+    get("/v1/nft") {
+        val collectionMetadata = nftService.getCollectionMetadata()
+        call.respond(collectionMetadata)
+    }
+
     get("/v1/nft/tokens/{id}") {
         val serverUrl = call.request.origin.serverUrl()
-        val token = call.parameters.getOrFail("id").toVisualKeyToken()
-        val metadata = nftService.getMetaData(serverUrl, token)
+        val tokenId = call.parameters.getOrFail("id").toTokenId()
+        val level = call.request.queryParameters.getOrFail("level").toLevel()
+        val power = call.request.queryParameters.getOrFail("power").toPower()
+        val createdAt = call.request.queryParameters.getOrFail("createdAt").toEpochSeconds()
+        val metadata = nftService.getTokenMetadata(serverUrl, tokenId, level, power, createdAt)
         call.respond(metadata)
     }
 
-    get("/v1/nft/images/{id}") {
-        val token = call.parameters.getOrFail("id").toVisualKeyToken()
-        val size = call.request.queryParameters["size"]?.toUIntOrNull() ?: 352u
+    get("/v1/nft/images/{id}.svg") {
+        val token = call.parameters.getOrFail("id").toTokenId()
+        val bitSize = call.request.queryParameters["size"]?.toBitSize() ?: DEFAULT_BIT_SIZE
 
-        val image = nftService.generateImage(
+        val image = nftService.generateSvgImage(
             token,
-            size,
-            bgColor = "black",
-            falseBitColor = "#ff0040",
-            trueBitColor = "#30ff12",
+            bitSize,
+            DEFAULT_FALSE_BIT_COLOR,
+            DEFAULT_TRUE_BIT_COLOR,
         )
 
-        call.response.header(HttpHeaders.CacheControl, "public, max-age=31536000, immutable")
+        call.response.header(HttpHeaders.CacheControl, CACHE_CONTROL_IMMUTABLE_YEAR)
         call.respondText(image, ContentType.Image.SVG, HttpStatusCode.OK)
     }
 
-    rateLimit(RateLimitName("/v1/nft/tokens/{id}/price")) {
-        get("/v1/nft/tokens/{id}/price") {
-            val token = call.parameters.getOrFail("id").toVisualKeyToken()
-            val chainId = call.request.queryParameters.getOrFail("chainId").toChainId()
-            val receiver = call.request.queryParameters.getOrFail("receiver").toEvmAddress().nonZero("receiver")
-            val checkDiscount = call.request.queryParameters["checkDiscount"]?.toBooleanStrictOrNull() ?: false
+    listOf("/v1/nft/images/{id}", "/v1/nft/images/{id}.png").forEach { path ->
+        get(path) {
+            val token = call.parameters.getOrFail("id").toTokenId()
+            val bitSize = call.request.queryParameters["size"]?.toBitSize() ?: DEFAULT_BIT_SIZE
 
-            val price = nftService.getTokenPrice(chainId, token, receiver, checkDiscount)
+            val image = nftService.generatePngImage(
+                token,
+                bitSize,
+                DEFAULT_FALSE_BIT_COLOR,
+                DEFAULT_TRUE_BIT_COLOR,
+            )
 
-            call.respond(price)
-        }
-    }
-
-    rateLimit(RateLimitName("/v1/nft/tokens/{id}/minting/authorization")) {
-        get("/v1/nft/tokens/{id}/minting/authorization") {
-            val token = call.parameters.getOrFail("id").toVisualKeyToken()
-            val chainId = call.request.queryParameters.getOrFail("chainId").toChainId()
-            val contract = call.request.queryParameters.getOrFail("contract").toEvmAddress()
-            val receiver = call.request.queryParameters.getOrFail("receiver").toEvmAddress().nonZero("receiver")
-            val checkDiscount = call.request.queryParameters["checkDiscount"]?.toBooleanStrictOrNull() ?: false
-            val price = call.request.queryParameters["price"]
-            val priceExpirationTime = call.request.queryParameters["priceExpirationTime"]
-            val priceSignature = call.request.queryParameters["priceSignature"]
-
-            if (price != null && priceExpirationTime != null && priceSignature != null) {
-                val authorization = nftService.authorizeMinting(
-                    chainId,
-                    contract,
-                    receiver,
-                    token,
-                    price.toPrice(),
-                    priceExpirationTime.toPriceExpirationTime(),
-                    priceSignature,
-                ).let { MintAuthorization(deadline = it.deadline, signature = it.signature) }
-
-                call.respond(authorization)
-            } else {
-                val authorization = nftService.authorizeMinting(chainId, contract, receiver, token, checkDiscount)
-                call.respond(authorization)
-            }
+            call.response.header(HttpHeaders.CacheControl, CACHE_CONTROL_IMMUTABLE_YEAR)
+            call.respondBytes(image, ContentType.Image.PNG, HttpStatusCode.OK)
         }
     }
 }
+
+private const val DEFAULT_BIT_SIZE = 29u
+private const val DEFAULT_FALSE_BIT_COLOR = "#ff0040"
+private const val DEFAULT_TRUE_BIT_COLOR = "#30ff12"
+private const val CACHE_CONTROL_IMMUTABLE_YEAR = "public, max-age=31536000, immutable"

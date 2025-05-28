@@ -1,75 +1,85 @@
 package visualkey.api.nft
 
 import io.ktor.server.plugins.*
-import visualkey.serializer.BigInteger
-import visualkey.util.isHexDecimalNumber
 import visualkey.util.toBigIntegerFromBinaryDecimalOrHex
-import org.web3j.utils.EnsUtils.EMPTY_ADDRESS as ZERO_ADDRESS
-import visualkey.api.nft.VisualKeyToken.isValid as isVisualKeyTokenValid
+import java.math.BigInteger
 
-fun String.toVisualKeyToken(): BigInteger {
+private val MinTokenIdValue = BigInteger.ONE
+private val MaxTokenIdValue = BigInteger("ffffffffffffffffffffffffffffffffffffffff", 16)
+private val MaxPowerValue = BigInteger("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16)
+
+private fun BigInteger.isTokenIdValid(): Boolean {
+    return this in MinTokenIdValue..MaxTokenIdValue
+}
+
+fun String.toTokenId(): BigInteger {
     val number = try {
         toBigIntegerFromBinaryDecimalOrHex()
-    } catch (e: NumberFormatException) {
+    } catch (_: NumberFormatException) {
         throw BadRequestException("token must be a binary, decimal, or a hexadecimal number")
     }
 
-    if (!number.isVisualKeyTokenValid()) {
+    if (!number.isTokenIdValid()) {
         throw BadRequestException(
-            "Token must be a number between " +
-                    "${VisualKeyToken.MinValue.toString(10)} and " +
-                    "0x${VisualKeyToken.MaxValue.toString(16)}"
+            "Token must be a number between ${MinTokenIdValue.toString(10)} and 0x${MaxTokenIdValue.toString(16)}"
         )
     }
 
     return number
 }
 
-fun String.toEvmAddress(): String {
-    if (length != 42 || !isHexDecimalNumber()) {
-        throw BadRequestException("Address must be a 42 character hexadecimal string")
+fun String.toLevel(): UByte {
+    val level = try {
+        toUByte()
+    } catch (_: NumberFormatException) {
+        throw BadRequestException("level must be a number between 0 and 160")
     }
 
-    return this
+    if (level < 0u || level > 160u) {
+        throw BadRequestException("level must be a number between 0 and 160")
+    }
+
+    return level
 }
 
-fun String.nonZero(param: String): String {
-    if (this == ZERO_ADDRESS) {
-        throw BadRequestException("$param must be a non-zero address")
+fun String.toPower(): BigInteger {
+    val power = try {
+        toBigIntegerFromBinaryDecimalOrHex()
+    } catch (_: NumberFormatException) {
+        throw BadRequestException("power must be a binary, decimal, or a hexadecimal number")
     }
 
-    return this
+    if (power < BigInteger.ZERO || power > MaxPowerValue) {
+        throw BadRequestException("power must be a positive 256 bit number")
+    }
+
+    return power
 }
 
-fun String.toChainId(): ULong {
-    try {
-        return toULong()
-    } catch (e: NumberFormatException) {
-        throw BadRequestException("chainId must be a positive integer")
+fun String.toEpochSeconds(): ULong {
+    val epochSeconds = try {
+        toLong()
+    } catch (_: NumberFormatException) {
+        throw BadRequestException("minted must be a valid Unix epoch timestamp in seconds")
     }
+
+    if (epochSeconds < 0) {
+        throw BadRequestException("minted must be a valid Unix epoch timestamp in seconds")
+    }
+
+    return epochSeconds.toULong()
 }
 
-fun String.toPrice(): BigInteger {
-    try {
-        return BigInteger(this)
-    } catch (e: NumberFormatException) {
-        throw BadRequestException("price must be a positive integer")
+fun String.toBitSize(): UInt {
+    val bitSize = try {
+        toUInt()
+    } catch (_: NumberFormatException) {
+        throw BadRequestException("size must be a positive integer")
     }
-}
 
-fun String.toPriceExpirationTime(): ULong {
-    try {
-        return toULong()
-    } catch (e: NumberFormatException) {
-        throw BadRequestException("priceExpirationTime must be a positive integer")
+    if (bitSize < 1u || bitSize > 100u) {
+        throw BadRequestException("size must be a positive integer between 1 and 100")
     }
-}
 
-private object VisualKeyToken {
-    val MinValue: BigInteger = BigInteger.ONE
-    val MaxValue: BigInteger = BigInteger("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364140", 16)
-
-    fun BigInteger.isValid(): Boolean {
-        return this in MinValue..MaxValue
-    }
+    return bitSize
 }

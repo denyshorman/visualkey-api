@@ -1,35 +1,49 @@
 package visualkey.service.nft
 
-import visualkey.serializer.BigInteger
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 
 @Serializable
-data class TokenPrice(
-    val price: BigInteger,
-    val expirationTime: Long,
-    val signature: String,
+data class CollectionMetadata(
+    // The name of the contract.
+    val name: String,
+
+    // The symbol of the contract.
+    val symbol: String,
+
+    // The description of the contract.
+    val description: String,
+
+    // A URI pointing to a resource with mime type image/* that represents the contract, typically displayed as a profile picture for the contract
+    val image: String,
+
+    // A URI pointing to a resource with mime type image/* that represents the contract, displayed as a banner image for the contract.
+    @SerialName("banner_image") val bannerImage: String,
+
+    // A URI pointing to a resource with mime type image/* that represents the featured image for the contract, typically used for a highlight section.
+    @SerialName("featured_image") val featuredImage: String,
+
+    // The external link of the contract.
+    @SerialName("external_link") val externalLink: String,
+
+    // An array of Ethereum addresses representing collaborators (authorized editors) of the contract.
+    val collaborators: List<String>,
 )
 
 @Serializable
-data class MintAuthorization(
-    val price: BigInteger? = null,
-    val deadline: ULong,
-    val signature: String,
-)
-
-@Serializable
-data class Metadata(
+data class TokenMetadata(
     val name: String,
     val description: String,
     val image: String,
-)
-
-@Serializable
-data class IssuedSignature(
-    val chainId: ULong,
-    val contract: String,
-    val receiver: String,
-    val token: BigInteger,
-    val mintDeadline: ULong,
-    val mintSignature: String,
-)
+    @SerialName("external_url") val externalUrl: String,
+    @SerialName("background_color") val bgColor: String,
+    val attributes: List<Attribute>,
+) {
+    @Serializable
+    data class Attribute(
+        @SerialName("trait_type") val traitType: String,
+        val value: JsonElement,
+        @SerialName("display_type") val displayType: String? = null
+    )
+}
